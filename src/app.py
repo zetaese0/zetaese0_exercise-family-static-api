@@ -25,16 +25,57 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/members', methods=['GET'])
-def handle_hello():
+@app.route('/members', methods=['GET', "POST"])
+def handle_members():
+    response_body = {}
+    if request.method == "GET":
+        print("Incoming GET request for all members")
+        members = jackson_family.get_all_members()
+        response_body["message"] = "OK"
+        response_body["family"] = members
+        return jsonify(response_body), 200
+    
+    if request.method == "POST":
+        data = request.json
+        print("Incoming POST request for ", data)
+        jackson_family.add_member(data)
+        response_body["message"] = "Successfully updated"
+        response_body["person"] = data
+        return response_body, 201
 
-    # this is how you can use the Family datastructure by calling its methods
-    members = jackson_family.get_all_members()
-    response_body = {
-        "hello": "world",
-        "family": members
-    }
-
+@app.route('/members/<int:id>', methods=["GET", "DELETE", "PUT"])
+def handle_member(id):
+    response_body = {}
+    if request.method == "GET":
+        member = jackson_family.get_member(id)
+        if member:
+            response_body["message"] = "OK"
+            response_body["member"] = member
+            return response_body, 200
+        response_body["message"] = "Person doesn't exists"
+        return response_body, 404
+    
+    if request.method == "DELETE":
+        deleted = jackson_family.delete_member(id)
+        if deleted == False:
+            response_body["message"] = "Person doesn't exists"
+            return response_body, 404
+        response_body["message"] = "Person deleted"
+        return response_body, 200
+    
+    if request.method == "PUT":
+        data = request.json
+        updated_member = jackson_family.update_member(id, data)
+        if updated_member != "Error1" and updated_member != "Error2":
+            response_body["message"] = "Person updated successfully"
+            response_body["result"] = updated_member
+            return response_body, 200
+        if updated_member == "Error1":
+            response_body["message"] = "Invalid body"
+            return response_body, 406
+        if updated_member == "Error2":
+            response_body["message"] = "Person doesn't exist"
+            return response_body, 404
 
     return jsonify(response_body), 200
 
